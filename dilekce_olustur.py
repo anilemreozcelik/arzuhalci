@@ -51,16 +51,23 @@ class PDF(FPDF):
 
 def create_pdf(metin):
     pdf = PDF()
+    
+    # Kenar boşluklarını ayarlayalım (Standart A4 düzeni: 20mm)
+    pdf.set_margins(20, 20, 20)
     pdf.add_page()
+    
     font_path = "DejaVuSans.ttf"
     if os.path.exists(font_path):
         pdf.add_font('DejaVu', '', font_path, uni=True)
-        pdf.set_font('DejaVu', '', 11)
+        # Font boyutunu 11'den 10'a düşürdük (Daha profesyonel durur)
+        pdf.set_font('DejaVu', '', 10)
     else:
-        pdf.set_font("Arial", size=11)
-    pdf.multi_cell(0, 7, metin)
-    return pdf.output(dest='S').encode('latin-1')
+        pdf.set_font("Arial", size=10)
 
+    # Satır aralığını 7'den 5'e düşürdük (Metni sıkılaştırır)
+    pdf.multi_cell(0, 5, metin)
+    
+    return pdf.output(dest='S').encode('latin-1')
 # --- SIDEBAR (GİZLİ AYARLAR) ---
 st.sidebar.title("⚙️ Ayarlar")
 if "GEMINI_API_KEY" in st.secrets:
