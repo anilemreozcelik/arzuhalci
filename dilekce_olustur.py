@@ -30,63 +30,59 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# --- PDF OLUŞTURMA SINIFI (GÜNCELLENMİŞ) ---
+# --- PDF OLUŞTURMA SINIFI (GÜNCELLENMİŞ - CİDDİ FONT) ---
 class PDF(FPDF):
     def header(self):
-        # Font kontrolü (Aynı kalıyor)
-        font_path = "DejaVuSans.ttf"
+        # Font Dosyasının Adı (GitHub'a yüklediğiniz dosya ile AYNI olmalı)
+        font_path = "LiberationSerif-Regular.ttf"
+        
         try:
             if os.path.exists(font_path):
-                self.add_font('DejaVu', '', font_path, uni=True)
-                self.set_font('DejaVu', '', 10)
+                # 'Times' takma adıyla fontu ekliyoruz
+                self.add_font('TimesNew', '', font_path, uni=True)
+                self.set_font('TimesNew', '', 10)
             else:
+                # Dosya yoksa mecburen standart Arial
                 self.set_font('Arial', '', 10)
         except:
             self.set_font('Arial', '', 10)
             
-        # --- DEĞİŞİKLİK BURADA ---
-        # Eski reklam kodunu sildik: self.cell(0, 10, 'Arzuhal.ai...', 0, 1, 'R')
-        
-        # Onun yerine sadece sağ üste küçük bir TARİH atabiliriz (Opsiyonel ama şık durur)
-        # Veya burayı tamamen boş bırakıp pass diyebiliriz.
-        # Biz şimdilik boşluk bırakalım ki kağıt antetli gibi temiz olsun.
-        self.ln(5) # Yukarıdan çok az boşluk (5mm)
+        # Header boş kalsın (Antetli kağıt havası için)
+        self.ln(5)
 
-    # Footer ekleyelim (Sayfa numarası için - Çok profesyonel durur)
     def footer(self):
-        self.set_y(-15) # Sayfanın altından 15mm yukarı
+        self.set_y(-15)
         
-        # Fontu tekrar ayarlayalım (Footer için küçük font)
-        font_path = "DejaVuSans.ttf"
+        # Footer için de aynı font
+        font_path = "LiberationSerif-Regular.ttf"
         if os.path.exists(font_path):
-            self.add_font('DejaVu', '', font_path, uni=True)
-            self.set_font('DejaVu', '', 8) # 8 Punto (Çok küçük)
+            self.add_font('TimesNew', '', font_path, uni=True)
+            self.set_font('TimesNew', '', 8)
         else:
             self.set_font('Arial', '', 8)
             
-        self.set_text_color(128) # Gri renk
-        # Sayfa X / Y formatı
+        self.set_text_color(128)
         self.cell(0, 10, f'Sayfa {self.page_no()}', 0, 0, 'C')
 
 def create_pdf(metin):
     pdf = PDF()
     
-    # Kenar boşluklarını ayarlayalım (Standart A4 düzeni: 20mm)
-    pdf.set_margins(20, 20, 20)
+    # Kenar boşlukları (Standart Resmi Evrak: 2.5 cm)
+    pdf.set_margins(25, 25, 25)
     pdf.add_page()
     
-    font_path = "DejaVuSans.ttf"
+    font_path = "LiberationSerif-Regular.ttf"
     if os.path.exists(font_path):
-        pdf.add_font('DejaVu', '', font_path, uni=True)
-        # Font boyutunu 11'den 10'a düşürdük (Daha profesyonel durur)
-        pdf.set_font('DejaVu', '', 10)
+        pdf.add_font('TimesNew', '', font_path, uni=True)
+        pdf.set_font('TimesNew', '', 11) # 11 Punto idealdir
     else:
-        pdf.set_font("Arial", size=10)
+        pdf.set_font("Arial", size=11)
 
-    # Satır aralığını 7'den 5'e düşürdük (Metni sıkılaştırır)
-    pdf.multi_cell(0, 5, metin)
+    # Satır Aralığı (5 veya 6 idealdir)
+    pdf.multi_cell(0, 6, metin)
     
     return pdf.output(dest='S').encode('latin-1')
+    
 # --- SIDEBAR (GİZLİ AYARLAR) ---
 st.sidebar.title("⚙️ Ayarlar")
 if "GEMINI_API_KEY" in st.secrets:
