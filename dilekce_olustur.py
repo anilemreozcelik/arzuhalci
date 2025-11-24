@@ -120,13 +120,24 @@ def gemini_dilekce_yaz(api_key, hikaye, ad, karsi_taraf, adres, tarih):
     model = genai.GenerativeModel('models/gemini-2.0-flash')
     
     full_prompt = f"""
-    GÖREV: Bir kiracının ev sahibine göndereceği resmi bir İHTARNAME hazırla.
-    ROLLER: Sen "{ad}" isimli vatandaşsın. Avukat DEĞİLSİN.
+    GÖREV: Aşağıdaki verilere dayanarak, resmi ve hukuki standartlara tam uygun bir İHTARNAME hazırla.
+    
+    ROLLER: Sen "{ad}" isimli vatandaşsın.
+    
     KURALLAR:
-    1. Boşluk Doldurma: Tarih: {tarih}, İsimler: {ad}, {karsi_taraf}. Asla boşluk bırakma.
-    2. Hukuki Dayanak: TBK Madde 344'e atıf yap.
-    3. Format: KEŞİDECİ, MUHATAP, KONU, AÇIKLAMALAR, SONUÇ.
-    4. TEMİZLİK: Asla **kalın**, *italik* veya #başlık işaretleri kullanma. DÜZ METİN ver.
+    1. FORMAT: Aşağıdaki başlıkları MUTLAKA kullan:
+       - İHTAR EDEN (KEŞİDECİ)
+       - MUHATAP
+       - KONU
+       - AÇIKLAMALAR (Maddeler halinde, hukuki dille)
+       - HUKUKİ SEBEPLER (Buraya şunu yaz: "TBK, HMK ve ilgili yasal mevzuat")
+       - DELİLLER (Buraya şunu yaz: "Kira sözleşmesi, banka dekontları, whatsapp yazışmaları ve her türlü yasal delil")
+       - SONUÇ VE İSTEM
+    
+    2. İÇERİK:
+       - Tarih: {tarih}, İsimler: {ad}, {karsi_taraf}.
+       - Türk Borçlar Kanunu Madde 344 ve TÜFE sınırına atıf yap.
+       - Asla **kalın**, *italik* kullanma. Düz metin ver.
     
     VERİLER:
     Keşideci: {ad}
