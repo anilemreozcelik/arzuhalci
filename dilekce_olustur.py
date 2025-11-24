@@ -1,4 +1,4 @@
-# --- 1. YAMA: SQLITE FIX (STREAMLIT CLOUD İÇİN) ---
+# --- 1. YAMA: SQLITE FIX ---
 __import__('pysqlite3')
 import sys
 sys.modules['sqlite3'] = sys.modules.pop('pysqlite3')
@@ -9,6 +9,9 @@ from fpdf import FPDF
 import google.generativeai as genai
 import chromadb
 import os
+import io # Word dosyası için hafıza yönetimi
+from docx import Document # Word kütüphanesi
+from docx.shared import Pt, Cm # Punto ve Santimetre ayarları
 
 # --- 3. SAYFA AYARLARI ---
 st.set_page_config(page_title="Arzuhal.ai | Pro", page_icon="⚖️")
@@ -52,7 +55,38 @@ def create_pdf(metin):
     pdf.multi_cell(0, 5, metin.strip(), align='J')
     return pdf.output(dest='S').encode('latin-1')
 
-# --- 5. RAG SİSTEMİ (AKILLI DATABASE) ---
+# --- YENİ EKLENEN: WORD (DOCX) OLUŞTURMA FONKSİYONU ---
+def create_word(metin):
+    doc = Document()
+    
+    # Yazı Tipi Ayarı (Times New Roman - 11 Punto)
+    style = doc.styles['Normal']
+    font = style.font
+    font.name = 'Times New Roman'
+    font.size = Pt(11)
+    
+    # Kenar Boşlukları (Standart 2.5 cm)
+    sections = doc.sections
+    for section in sections:
+        section.top_margin = Cm(2.5)
+        section.bottom_margin = Cm(2.5)
+        section.left_margin = Cm(2.5)
+        section.right_margin = Cm(2.5)
+    
+    # Metni paragraflara böl ve ekle
+    # Yapay zeka metni tek blok verebilir, biz onu satır satır işleyelim
+    for paragraf in metin.split('\n'):
+        if paragraf.strip(): # Boş satırları atlama, ama gereksizleri sil
+            p = doc.add_paragraph(paragraf)
+            p.paragraph_format.space_after = Pt(6) # Paragraf arası boşluk
+            
+    # Dosyayı RAM'e kaydet (Disk'e kaydetmeden indirtmek için)
+    buffer = io.BytesIO()
+    doc.save(buffer)
+    buffer.seek(0)
+    return buffer
+
+# --- 5. RAG SİSTEMİ ---
 @st.cache_resource
 def get_hukuk_sistemi():
     chroma_client = chromadb.Client()
@@ -63,49 +97,38 @@ def get_hukuk_sistemi():
     
     collection = chroma_client.create_collection(name="hukuk_kutuphanesi_v2")
 
-    # BELGELERİ GÜÇLENDİRDİK (Yüksek ses, matkap vs. ekledik)
     documents = [
-        """KONU: Gürültü, Komşu, Rahatsızlık, Yüksek Ses, Matkap, Müzik, Bağrışma, Köpek Sesi. 
-        İÇERİK: KMK Madde 18 gereği kat malikleri birbirini rahatsız etmemek ve gürültü yapmamakla yükümlüdür. Sürekli gürültü (yüksek ses, müzik vb.) tahliye sebebidir. 
+        """KONU: Gürültü, Komşu, Rahatsızlık, Yüksek Ses, Matkap, Müzik, Bağrışma. 
+        İÇERİK: KMK Madde 18 gereği kat malikleri birbirini rahatsız etmemek ve gürültü yapmamakla yükümlüdür. Sürekli gürültü tahliye sebebidir. 
         (Kat Mülkiyeti Kanunu Madde 18)""",
         
-        """KONU: Kira Zammı, Kira Artışı, Fahiş Fiyat, Yüksek Zam, Enflasyon, %25 Sınırı.
-        İÇERİK: TBK Madde 344 gereği kira artışı, bir önceki kira yılındaki TÜFE (12 aylık ortalama) oranını geçemez. Ev sahibi keyfi yüksek zam yapamaz.
+        """KONU: Kira Zammı, Kira Artışı, Fahiş Fiyat, Yüksek Zam, Enflasyon.
+        İÇERİK: TBK Madde 344 gereği kira artışı, bir önceki kira yılındaki TÜFE (12 aylık ortalama) oranını geçemez.
         (Türk Borçlar Kanunu Madde 344)""",
         
-        """KONU: Evden Çıkarma, Tahliye Taahhütnamesi, Ev Sahibi Çık Diyor, Oğlum Gelecek, İhtiyaç Nedeniyle Tahliye.
-        İÇERİK: Kiraya veren, kendisi veya yakını oturacaksa (gereksinim) tahliye isteyebilir. Ancak haklı sebep yoksa keyfi çıkaramaz.
+        """KONU: Evden Çıkarma, Tahliye Taahhütnamesi, Ev Sahibi Çık Diyor, Oğlum Gelecek.
+        İÇERİK: Kiraya veren, kendisi veya yakını oturacaksa tahliye isteyebilir. Haklı sebep yoksa keyfi çıkaramaz.
         (TBK Madde 350/355)""",
         
-        """KONU: İnternet İptali, Taahhüt Cezası, Cayma Bedeli, Abonelik Feshi.
-        İÇERİK: Tüketici Kanunu gereği, taahhütlü aboneliklerde hizmet ayıplıysa veya 1 yıldan uzun sözleşmelerde cezasız fesih hakkı vardır.
+        """KONU: İnternet İptali, Taahhüt Cezası, Cayma Bedeli.
+        İÇERİK: Tüketici Kanunu gereği, taahhütlü aboneliklerde hizmet ayıplıysa cezasız fesih hakkı vardır.
         (Tüketici Hakları Kanunu)"""
     ]
-    
     ids = ["gurultu_1", "kira_1", "tahliye_1", "internet_1"]
     metadatas = [{"kat": "gurultu"}, {"kat": "kira"}, {"kat": "tahliye"}, {"kat": "tuketici"}]
-
     collection.add(documents=documents, ids=ids, metadatas=metadatas)
     return collection
 
-# --- 6. YENİ ARAMA STRATEJİSİ (TOP 3 + LLM KARARI) ---
 def kanun_maddesi_bul_ve_hazirla(collection, sorgu):
-    # ARTIK TEK BİR SONUÇ DEĞİL, EN İYİ 3 SONUCU GETİRİYORUZ
-    results = collection.query(
-        query_texts=[sorgu],
-        n_results=3  # Şansımızı artırdık
-    )
-    
-    # 3 maddeyi alt alta birleştirip tek metin yapıyoruz
+    results = collection.query(query_texts=[sorgu], n_results=3)
     bulunanlar = ""
     for i, doc in enumerate(results['documents'][0]):
         bulunanlar += f"SEÇENEK {i+1}: {doc}\n\n"
-        
     return bulunanlar
 
-# --- 7. ARAYÜZ ---
-st.title("⚖️ Arzuhal.ai | Akıllı RAG")
-st.caption("Çoklu Tarama & Akıllı Seçim Modülü")
+# --- 6. ARAYÜZ ---
+st.title("⚖️ Arzuhal.ai | Word + PDF")
+st.caption("Çoklu Format Destekli Hukuk Asistanı")
 
 if "GEMINI_API_KEY" in st.secrets:
     api_key = st.secrets["GEMINI_API_KEY"]
@@ -129,55 +152,52 @@ if st.button("🔍 Analiz Et ve Yaz"):
         st.error("Lütfen alanları doldurun.")
     else:
         status = st.empty()
-        
-        # 1. RETRIEVAL (Geniş Arama)
-        status.info("💾 Veritabanında olası kanunlar taranıyor...")
-        
-        # Buradan artık 3 tane potansiyel kanun dönüyor
+        status.info("💾 Veritabanı taranıyor...")
         olasi_kanunlar = kanun_maddesi_bul_ve_hazirla(db_collection, hikaye)
         
-        # Kullanıcıya ne bulduğumuzu gösterelim (debug için iyi olur)
-        with st.expander("Sistemin Bulduğu Olası Kanun Maddeleri (Tıklayıp Görün)"):
-            st.text(olasi_kanunlar)
-        
-        # 2. GENERATION (Akıllı Seçim)
-        status.info("🤖 Yapay zeka en uygun kanunu seçiyor ve dilekçeyi yazıyor...")
-        
+        status.info("🤖 Yapay zeka yazıyor...")
         genai.configure(api_key=api_key)
         model = genai.GenerativeModel('models/gemini-2.0-flash')
         
-        # PROMPT DEĞİŞTİ: Artık "Seçim Yap" diyoruz
         full_prompt = f"""
-        GÖREV: Aşağıdaki "BULUNAN KANUN MADDELERİ" listesinden, kullanıcının sorununa EN UYGUN olanı seç ve ona göre resmi bir İHTARNAME hazırla.
-        
-        KULLANICI SORUNU: {hikaye}
-        
-        BULUNAN KANUN MADDELERİ (Bunlardan en alakalı olanı kullan):
-        {olasi_kanunlar}
-        
+        GÖREV: Aşağıdaki kanun maddelerinden en uygun olanı seç ve resmi bir İHTARNAME hazırla.
+        SORUN: {hikaye}
+        KANUNLAR: {olasi_kanunlar}
         ROLLER: Sen "{ad}" isimli vatandaşsın.
-        
         KURALLAR:
-        1. Sadece seçtiğin doğru kanun maddesine atıf yap. Diğerlerini görmezden gel.
-        2. Eğer konu gürültü ise "Kat Mülkiyeti Kanunu", kira ise "TBK 344" kullan. Yanlış kanunu seçme.
-        3. Format: İHTAR EDEN, MUHATAP, KONU, AÇIKLAMALAR, HUKUKİ SEBEPLER, SONUÇ.
-        4. Asla markdown (**bold**) kullanma.
-        
-        VERİLER:
-        Keşideci: {ad}, Adres: {adres}
-        Muhatap: {karsi_taraf}
-        Tarih: {tarih}
+        1. Seçtiğin doğru kanuna atıf yap.
+        2. Format: İHTAR EDEN, MUHATAP, KONU, AÇIKLAMALAR, HUKUKİ SEBEPLER, SONUÇ.
+        3. Asla markdown (**bold**) kullanma.
+        VERİLER: Keşideci: {ad}, {adres} - Muhatap: {karsi_taraf} - Tarih: {tarih}
         """
         
         response = model.generate_content(full_prompt)
         dilekce_metni = response.text.replace("**", "").replace("##", "")
         
         status.empty()
-        st.success("✅ Dilekçe Oluşturuldu")
+        st.success("✅ Dilekçe Hazır")
         
-        col_res1, col_res2 = st.columns([3,1])
-        with col_res1:
-            st.text_area("Sonuç", value=dilekce_metni, height=400)
-        with col_res2:
+        # --- İNDİRME ALANI (2 BUTON YAN YANA) ---
+        st.text_area("Önizleme", value=dilekce_metni, height=300)
+        
+        col_down1, col_down2 = st.columns(2)
+        
+        with col_down1:
             pdf_data = create_pdf(dilekce_metni)
-            st.download_button("📄 PDF İNDİR", pdf_data, "dilekce.pdf", "application/pdf")
+            st.download_button(
+                label="📄 PDF Olarak İndir",
+                data=pdf_data,
+                file_name="dilekce.pdf",
+                mime="application/pdf",
+                use_container_width=True
+            )
+            
+        with col_down2:
+            docx_data = create_word(dilekce_metni)
+            st.download_button(
+                label="📝 Word (DOCX) Olarak İndir",
+                data=docx_data,
+                file_name="dilekce.docx",
+                mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+                use_container_width=True
+            )
