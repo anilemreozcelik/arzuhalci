@@ -2,3 +2,4 @@ streamlit
 google-generativeai
 fpdf
 chromadb
+pysqlite3-binary

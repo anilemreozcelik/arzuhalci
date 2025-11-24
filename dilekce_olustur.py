@@ -1,3 +1,9 @@
+# --- EN TEPEYE EKLENECEK YAMA (SQLITE FIX) ---
+import sys
+import pysqlite3
+sys.modules["sqlite3"] = sys.modules.pop("pysqlite3")
+
+# --- SONRA DİĞERLERİ ---
 import streamlit as st
 from fpdf import FPDF
 import google.generativeai as genai
