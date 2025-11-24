@@ -30,9 +30,10 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# --- PDF OLUŞTURMA SINIFI ---
+# --- PDF OLUŞTURMA SINIFI (GÜNCELLENMİŞ) ---
 class PDF(FPDF):
     def header(self):
+        # Font kontrolü (Aynı kalıyor)
         font_path = "DejaVuSans.ttf"
         try:
             if os.path.exists(font_path):
@@ -43,11 +44,29 @@ class PDF(FPDF):
         except:
             self.set_font('Arial', '', 10)
             
-        # PDF Başlığına Tarih ve Marka Ekleyelim
-        self.set_text_color(100, 100, 100) # Gri renk
-        self.cell(0, 10, 'Arzuhal.ai - Yapay Zeka Hukuk Asistanı', 0, 1, 'R')
-        self.ln(5)
-        self.set_text_color(0, 0, 0) # Siyah renge dön
+        # --- DEĞİŞİKLİK BURADA ---
+        # Eski reklam kodunu sildik: self.cell(0, 10, 'Arzuhal.ai...', 0, 1, 'R')
+        
+        # Onun yerine sadece sağ üste küçük bir TARİH atabiliriz (Opsiyonel ama şık durur)
+        # Veya burayı tamamen boş bırakıp pass diyebiliriz.
+        # Biz şimdilik boşluk bırakalım ki kağıt antetli gibi temiz olsun.
+        self.ln(5) # Yukarıdan çok az boşluk (5mm)
+
+    # Footer ekleyelim (Sayfa numarası için - Çok profesyonel durur)
+    def footer(self):
+        self.set_y(-15) # Sayfanın altından 15mm yukarı
+        
+        # Fontu tekrar ayarlayalım (Footer için küçük font)
+        font_path = "DejaVuSans.ttf"
+        if os.path.exists(font_path):
+            self.add_font('DejaVu', '', font_path, uni=True)
+            self.set_font('DejaVu', '', 8) # 8 Punto (Çok küçük)
+        else:
+            self.set_font('Arial', '', 8)
+            
+        self.set_text_color(128) # Gri renk
+        # Sayfa X / Y formatı
+        self.cell(0, 10, f'Sayfa {self.page_no()}', 0, 0, 'C')
 
 def create_pdf(metin):
     pdf = PDF()
