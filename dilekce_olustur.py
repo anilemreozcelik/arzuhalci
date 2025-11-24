@@ -36,10 +36,17 @@ def create_pdf(metin):
     pdf.multi_cell(0, 7, metin) # Satır aralığını biraz daralttık (7)
     return pdf.output(dest='S').encode('latin-1')
 
-# --- SIDEBAR ---
+# --- SIDEBAR (AYARLAR) ---
 st.sidebar.header("🔑 Ayarlar")
-api_key = st.sidebar.text_input("Google Gemini API Key", type="password", placeholder="AIzaSy...")
 
+# Önce gizli anahtarı (Secrets) kontrol et
+if "GEMINI_API_KEY" in st.secrets:
+    api_key = st.secrets["GEMINI_API_KEY"]
+    st.sidebar.success("✅ API Anahtarı Sistemde Tanımlı")
+else:
+    # Yoksa kullanıcıdan iste
+    api_key = st.sidebar.text_input("Google Gemini API Key", type="password", placeholder="AIzaSy...")
+    
 st.sidebar.markdown("---")
 st.sidebar.header("📌 Kişisel Bilgiler")
 kullanici_ad = st.sidebar.text_input("Adınız Soyadınız", "Ahmet Yılmaz")
