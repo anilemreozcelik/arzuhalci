@@ -1,4 +1,4 @@
-# --- 1. YAMA: SQLITE FIX (MUTLAKA EN BAŞTA OLMALI) ---
+# --- 1. YAMA: SQLITE FIX (STREAMLIT CLOUD İÇİN) ---
 __import__('pysqlite3')
 import sys
 sys.modules['sqlite3'] = sys.modules.pop('pysqlite3')
@@ -11,7 +11,7 @@ import chromadb
 import os
 
 # --- 3. SAYFA AYARLARI ---
-st.set_page_config(page_title="Arzuhal.ai | RAG Sistemi", page_icon="⚖️")
+st.set_page_config(page_title="Arzuhal.ai | Pro", page_icon="⚖️")
 
 # --- 4. PDF SINIFI ---
 class PDF(FPDF):
@@ -52,69 +52,68 @@ def create_pdf(metin):
     pdf.multi_cell(0, 5, metin.strip(), align='J')
     return pdf.output(dest='S').encode('latin-1')
 
-# --- 5. RAG SİSTEMİ (CACHE RESOURCE İLE DONDURULMUŞ) ---
-# @st.cache_resource sayesinde bu fonksiyon sadece 1 kere çalışır 
-# ve veritabanı bağlantısı asla kopmaz.
+# --- 5. RAG SİSTEMİ (AKILLI DATABASE) ---
 @st.cache_resource
 def get_hukuk_sistemi():
-    # İstemciyi başlat
     chroma_client = chromadb.Client()
-    
-    # Koleksiyonu oluştur (Varsa sil, temiz başla)
     try:
-        chroma_client.delete_collection(name="hukuk_kutuphanesi")
+        chroma_client.delete_collection(name="hukuk_kutuphanesi_v2")
     except:
         pass
     
-    collection = chroma_client.create_collection(name="hukuk_kutuphanesi")
+    collection = chroma_client.create_collection(name="hukuk_kutuphanesi_v2")
 
-    # BELGELER (Zenginleştirilmiş Veri Seti)
+    # BELGELERİ GÜÇLENDİRDİK (Yüksek ses, matkap vs. ekledik)
     documents = [
-        """KONU: Gürültü, Komşu, Rahatsızlık, Ses, Matkap, Müzik. 
-        İÇERİK: Kiracı veya ev sahibi, bağımsız bölümleri kullanırken doğruluk kurallarına uymak, özellikle birbirini rahatsız etmemek ve gürültü yapmamakla yükümlüdür. Gürültü yapmak tahliye sebebidir. 
-        (Kat Mülkiyeti Kanunu Madde 18 - Gürültü Yasağı)""",
+        """KONU: Gürültü, Komşu, Rahatsızlık, Yüksek Ses, Matkap, Müzik, Bağrışma, Köpek Sesi. 
+        İÇERİK: KMK Madde 18 gereği kat malikleri birbirini rahatsız etmemek ve gürültü yapmamakla yükümlüdür. Sürekli gürültü (yüksek ses, müzik vb.) tahliye sebebidir. 
+        (Kat Mülkiyeti Kanunu Madde 18)""",
         
-        """KONU: Kira Zammı, Kira Artışı, Fahiş Fiyat, Yüksek Zam, Ev Sahibi Zam İstiyor, Enflasyon.
-        İÇERİK: Konut kiralarında kira bedeli artışı, bir önceki kira yılındaki TÜFE (On iki aylık ortalama) oranını geçemez. Ev sahibi keyfi olarak %100 veya fahiş zam yapamaz. Yasal sınır TÜFE'dir.
-        (TBK Madde 344 - Kira Belirleme)""",
+        """KONU: Kira Zammı, Kira Artışı, Fahiş Fiyat, Yüksek Zam, Enflasyon, %25 Sınırı.
+        İÇERİK: TBK Madde 344 gereği kira artışı, bir önceki kira yılındaki TÜFE (12 aylık ortalama) oranını geçemez. Ev sahibi keyfi yüksek zam yapamaz.
+        (Türk Borçlar Kanunu Madde 344)""",
         
-        """KONU: Evden Çıkarma, Tahliye Taahhütnamesi, Ev Sahibi Çık Diyor, Oğlum Gelecek.
-        İÇERİK: Kiraya veren, gereksinim amacıyla (oğlum oturacak vb.) kiralananın boşaltılmasını sağladığında, haklı sebep olmaksızın, kiralananı üç yıl geçmedikçe eski kiracısından başkasına kiralayamaz.
-        (TBK Madde 355)""",
+        """KONU: Evden Çıkarma, Tahliye Taahhütnamesi, Ev Sahibi Çık Diyor, Oğlum Gelecek, İhtiyaç Nedeniyle Tahliye.
+        İÇERİK: Kiraya veren, kendisi veya yakını oturacaksa (gereksinim) tahliye isteyebilir. Ancak haklı sebep yoksa keyfi çıkaramaz.
+        (TBK Madde 350/355)""",
         
         """KONU: İnternet İptali, Taahhüt Cezası, Cayma Bedeli, Abonelik Feshi.
-        İÇERİK: Abonelik sözleşmelerinde tüketici, taahhüt süresi dolmadan haklı bir sebeple veya hizmet ayıplıysa ceza ödemeden sözleşmeyi feshedebilir.
-        (Tüketici Kanunu)"""
+        İÇERİK: Tüketici Kanunu gereği, taahhütlü aboneliklerde hizmet ayıplıysa veya 1 yıldan uzun sözleşmelerde cezasız fesih hakkı vardır.
+        (Tüketici Hakları Kanunu)"""
     ]
     
-    ids = ["gurultu", "kira_artis", "tahliye", "internet"]
-    metadatas = [{"kategori": "komsu"}, {"kategori": "kira"}, {"kategori": "tahliye"}, {"kategori": "tuketici"}]
+    ids = ["gurultu_1", "kira_1", "tahliye_1", "internet_1"]
+    metadatas = [{"kat": "gurultu"}, {"kat": "kira"}, {"kat": "tahliye"}, {"kat": "tuketici"}]
 
     collection.add(documents=documents, ids=ids, metadatas=metadatas)
     return collection
 
-# --- 6. RETRIEVAL (ARAMA) ---
-def kanun_maddesi_bul(collection, sorgu):
+# --- 6. YENİ ARAMA STRATEJİSİ (TOP 3 + LLM KARARI) ---
+def kanun_maddesi_bul_ve_hazirla(collection, sorgu):
+    # ARTIK TEK BİR SONUÇ DEĞİL, EN İYİ 3 SONUCU GETİRİYORUZ
     results = collection.query(
         query_texts=[sorgu],
-        n_results=1
+        n_results=3  # Şansımızı artırdık
     )
-    return results['documents'][0][0]
+    
+    # 3 maddeyi alt alta birleştirip tek metin yapıyoruz
+    bulunanlar = ""
+    for i, doc in enumerate(results['documents'][0]):
+        bulunanlar += f"SEÇENEK {i+1}: {doc}\n\n"
+        
+    return bulunanlar
 
 # --- 7. ARAYÜZ ---
-st.title("⚖️ Arzuhal.ai | RAG Sistemi")
-st.caption("Veritabanı Taramalı Akıllı Sistem")
+st.title("⚖️ Arzuhal.ai | Akıllı RAG")
+st.caption("Çoklu Tarama & Akıllı Seçim Modülü")
 
-# Sidebar - API Key
 if "GEMINI_API_KEY" in st.secrets:
     api_key = st.secrets["GEMINI_API_KEY"]
 else:
     api_key = st.sidebar.text_input("API Key", type="password")
 
-# --- VERİTABANINI ÇAĞIR (Artık Session State değil, Cache kullanıyoruz) ---
 db_collection = get_hukuk_sistemi()
 
-# --- FORM ---
 col1, col2 = st.columns(2)
 with col1:
     ad = st.text_input("Adınız Soyadınız", "Ahmet Yılmaz")
@@ -123,49 +122,58 @@ with col2:
     karsi_taraf = st.text_input("Muhatap", "Mehmet Demir")
     tarih = st.text_input("Tarih", "01.05.2023")
 
-hikaye = st.text_area("Sorunu Anlatın", placeholder="Örn: Ev sahibim %100 zam istiyor.")
+hikaye = st.text_area("Sorunu Anlatın", placeholder="Örn: Komşum çok yüksek ses yapıyor.")
 
-# --- AKSİYON ---
-if st.button("🔍 Kanunu Bul ve Dilekçeyi Yaz"):
+if st.button("🔍 Analiz Et ve Yaz"):
     if not api_key or not hikaye:
-        st.error("Lütfen tüm alanları doldurun.")
+        st.error("Lütfen alanları doldurun.")
     else:
-        status_box = st.empty()
+        status = st.empty()
         
-        # 1. RETRIEVAL
-        status_box.info("💾 Veritabanında kanun maddesi taranıyor...")
-        bulunan_kanun = kanun_maddesi_bul(db_collection, hikaye)
+        # 1. RETRIEVAL (Geniş Arama)
+        status.info("💾 Veritabanında olası kanunlar taranıyor...")
         
-        st.success(f"✅ Tespit Edilen Hukuki Dayanak:\n{bulunan_kanun}")
+        # Buradan artık 3 tane potansiyel kanun dönüyor
+        olasi_kanunlar = kanun_maddesi_bul_ve_hazirla(db_collection, hikaye)
         
-        # 2. GENERATION
-        status_box.info("🤖 Dilekçe yazılıyor...")
+        # Kullanıcıya ne bulduğumuzu gösterelim (debug için iyi olur)
+        with st.expander("Sistemin Bulduğu Olası Kanun Maddeleri (Tıklayıp Görün)"):
+            st.text(olasi_kanunlar)
+        
+        # 2. GENERATION (Akıllı Seçim)
+        status.info("🤖 Yapay zeka en uygun kanunu seçiyor ve dilekçeyi yazıyor...")
         
         genai.configure(api_key=api_key)
         model = genai.GenerativeModel('models/gemini-2.0-flash')
         
+        # PROMPT DEĞİŞTİ: Artık "Seçim Yap" diyoruz
         full_prompt = f"""
-        GÖREV: Aşağıdaki "BULUNAN KANUN MADDESİ"ni temel alarak resmi bir İHTARNAME hazırla.
-        ROLLER: Sen "{ad}" isimli vatandaşsın.
-        
-        CONTEXT (BİLGİ BANKASI):
-        Sistem veritabanından şu kanun maddesini buldu: "{bulunan_kanun}"
-        Lütfen dilekçeyi yazarken ÖZELLİKLE bu maddeye atıf yap.
+        GÖREV: Aşağıdaki "BULUNAN KANUN MADDELERİ" listesinden, kullanıcının sorununa EN UYGUN olanı seç ve ona göre resmi bir İHTARNAME hazırla.
         
         KULLANICI SORUNU: {hikaye}
         
-        FORMAT:
-        - İHTAR EDEN: {ad}, {adres}
-        - MUHATAP: {karsi_taraf}
-        - KONU, AÇIKLAMALAR, HUKUKİ SEBEPLER, SONUÇ.
-        - Asla markdown (**bold**) kullanma.
+        BULUNAN KANUN MADDELERİ (Bunlardan en alakalı olanı kullan):
+        {olasi_kanunlar}
+        
+        ROLLER: Sen "{ad}" isimli vatandaşsın.
+        
+        KURALLAR:
+        1. Sadece seçtiğin doğru kanun maddesine atıf yap. Diğerlerini görmezden gel.
+        2. Eğer konu gürültü ise "Kat Mülkiyeti Kanunu", kira ise "TBK 344" kullan. Yanlış kanunu seçme.
+        3. Format: İHTAR EDEN, MUHATAP, KONU, AÇIKLAMALAR, HUKUKİ SEBEPLER, SONUÇ.
+        4. Asla markdown (**bold**) kullanma.
+        
+        VERİLER:
+        Keşideci: {ad}, Adres: {adres}
+        Muhatap: {karsi_taraf}
+        Tarih: {tarih}
         """
         
         response = model.generate_content(full_prompt)
-        # Temizlik
         dilekce_metni = response.text.replace("**", "").replace("##", "")
         
-        status_box.empty()
+        status.empty()
+        st.success("✅ Dilekçe Oluşturuldu")
         
         col_res1, col_res2 = st.columns([3,1])
         with col_res1:
