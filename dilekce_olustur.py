@@ -67,29 +67,27 @@ class PDF(FPDF):
 def create_pdf(metin):
     pdf = PDF()
     
-    # 1. AYAR: Kenar boşluklarını 20mm yapalım (Daha fazla alan kalır, taşmayı önler)
-    pdf.set_margins(20, 20, 20)
+    # 1. HAMLE: Kenar boşluklarını 20mm'den 15mm'ye düşürdük.
+    # Bu bize dikeyde yaklaşık 10mm (2-3 satır) ekstra alan kazandırır.
+    pdf.set_margins(15, 15, 15)
     
-    # Otomatik sayfa sonu ayarı (Sayfa bitimine 20mm kala yeni sayfaya geç)
-    pdf.set_auto_page_break(auto=True, margin=20)
-    
+    pdf.set_auto_page_break(auto=True, margin=15)
     pdf.add_page()
     
     font_path = "LiberationSerif-Regular.ttf"
     if os.path.exists(font_path):
         pdf.add_font('TimesNew', '', font_path, uni=True)
-        pdf.set_font('TimesNew', '', 11) # 11 Punto (İdeal Okunabilirlik)
+        # Fontu 11'den 10.5'a çektik. Gözle fark edilmez ama yer kazandırır.
+        pdf.set_font('TimesNew', '', 10.5) 
     else:
-        pdf.set_font("Arial", size=11)
+        pdf.set_font("Arial", size=10)
 
-    # 2. AYAR: Metin Temizliği (Gereksiz boşlukları al)
-    metin = metin.strip() 
-
-    # 3. AYAR: align='J' (Justify - İki Yana Yasla)
-    # Hukukçular bunu kullanır. Metni blok gibi dümdüz yapar.
-    pdf.multi_cell(0, 6, metin, align='J')
+    # 2. HAMLE: Satır aralığını 6mm'den 5mm'ye düşürdük.
+    # Metin bloğu daha kompakt durur.
+    pdf.multi_cell(0, 5, metin.strip(), align='J')
     
-    return pdf.output(dest='S').encode('latin-1')  
+    return pdf.output(dest='S').encode('latin-1')
+    
 # --- SIDEBAR (GİZLİ AYARLAR) ---
 st.sidebar.title("⚙️ Ayarlar")
 if "GEMINI_API_KEY" in st.secrets:
