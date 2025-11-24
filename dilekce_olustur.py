@@ -67,22 +67,29 @@ class PDF(FPDF):
 def create_pdf(metin):
     pdf = PDF()
     
-    # Kenar boşlukları (Standart Resmi Evrak: 2.5 cm)
-    pdf.set_margins(25, 25, 25)
+    # 1. AYAR: Kenar boşluklarını 20mm yapalım (Daha fazla alan kalır, taşmayı önler)
+    pdf.set_margins(20, 20, 20)
+    
+    # Otomatik sayfa sonu ayarı (Sayfa bitimine 20mm kala yeni sayfaya geç)
+    pdf.set_auto_page_break(auto=True, margin=20)
+    
     pdf.add_page()
     
     font_path = "LiberationSerif-Regular.ttf"
     if os.path.exists(font_path):
         pdf.add_font('TimesNew', '', font_path, uni=True)
-        pdf.set_font('TimesNew', '', 11) # 11 Punto idealdir
+        pdf.set_font('TimesNew', '', 11) # 11 Punto (İdeal Okunabilirlik)
     else:
         pdf.set_font("Arial", size=11)
 
-    # Satır Aralığı (5 veya 6 idealdir)
-    pdf.multi_cell(0, 6, metin)
+    # 2. AYAR: Metin Temizliği (Gereksiz boşlukları al)
+    metin = metin.strip() 
+
+    # 3. AYAR: align='J' (Justify - İki Yana Yasla)
+    # Hukukçular bunu kullanır. Metni blok gibi dümdüz yapar.
+    pdf.multi_cell(0, 6, metin, align='J')
     
-    return pdf.output(dest='S').encode('latin-1')
-    
+    return pdf.output(dest='S').encode('latin-1')  
 # --- SIDEBAR (GİZLİ AYARLAR) ---
 st.sidebar.title("⚙️ Ayarlar")
 if "GEMINI_API_KEY" in st.secrets:
